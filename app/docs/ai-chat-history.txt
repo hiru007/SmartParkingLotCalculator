@@ -1,0 +1,350 @@
+You said
+AIM : Generate meta prompt(not code).
+
+Business requirement : Building a smart parking lot rate calculator.
+
+Types of vehicle to be park : CAR, BUS, MOTOR_CYCLE
+
+There are rate policies,
+
+1. "standard with peak hours rate policy"
+
+- base rate for standard is $5 for initial hour, $3 for second hour and $2 dollar for additional hours.
+
+- (7:00 AM – 10:00 AM OR 4:00 PM – 7:00 PM on weekdays) shall incur a 1.5x multiplier
+
+applied to that specific hour's calculated rate.
+
+- Calculation Protocol: Total parking duration shall be consistently rounded upward to
+
+the nearest full hour. Each resulting hourly segment must be individually assessed for
+
+peak time overlap.
+
+
+
+2. Early Bird Special: A flat rate designated for commuter traffic, subject to loyalty discounts.
+
+Applicability Condition: Requires vehicle entry between 6:00 AM – 9:00 AM AND
+
+vehicle exit between 3:30 PM – 7:00 PM on the same calendar day.
+
+Duration Constraint: The total parking session must not exceed 15 hours.
+
+Base Car Rate: A flat fee of $15.00.
+
+Loyalty Discount Application: The base rate is reduced based on the customer's
+
+loyalty tier:
+
+Tier Discount
+
+SILVER 10%
+
+GOLD 20%
+
+PLATINUM 30%
+
+
+
+3. Night Owl Special: A flat rate designated for overnight parking, subject to loyalty discounts.
+
+Applicability Condition: Requires vehicle entry between 6:00 PM – 11:59 PM AND
+
+vehicle exit between 5:00 AM – 10:00 AM on the next consecutive calendar day.
+
+Duration Constraint: The total parking session must not exceed 18 hours.
+
+Base Car Rate: A flat fee of $8.00.
+
+Loyalty Discount Application: Uses the identical percentage structure defined in the
+
+Early Bird Special policy.
+
+
+
+Base rates mentioned above are for CAR, for BUS it is 2X of rate applicable for CAR, For MOTOR_CYCLE it is 0.8X of rate applicable for CAR
+
+
+
+
+
+Technical requirement :
+
+- Use python 3+
+
+- The application will run in dockerised environment
+
+- python pytest unit testing framework.
+
+Design :
+
+- Build base policy interface, that can be extended for new types.
+
+- Any addition of new policy should not modify the exiting ones.
+
+- Any change in the base rates should not modify the core business logic.
+
+- implmentation should only depends on interface/ abstraction
+
+Gemini said
+To build a robust, enterprise-grade parking calculator, the "Meta Prompt" needs to act as a Senior Architect's brief. It must emphasize the Open/Closed Principle and the Strategy Pattern to ensure your rates and policies remain decoupled.
+
+Here is a comprehensive meta-prompt you can use to generate the solution.
+
+The Meta-Prompt
+Role: You are an Expert Python Software Architect specializing in Clean Architecture and SOLID principles.
+
+Objective: Design and implement a highly extensible "Smart Parking Lot Rate Calculator" in Python 3.10+. The system must calculate parking fees based on vehicle types, complex time-based policies, and loyalty tiers.
+
+1. Structural Requirements (Design Patterns)
+Strategy Pattern: Implement a ParkingPolicy interface. Each specific rate logic (Standard, Early Bird, Night Owl) must be a concrete implementation of this interface.
+
+Dependency Inversion: The core calculator must depend on the ParkingPolicy abstraction, not concrete classes.
+
+Factory Pattern: Use a factory to resolve the appropriate policy based on the parking session details.
+
+Configuration Decoupling: Base rates ($5, $3, $2) and multipliers (2x for BUS) must be stored in a configuration object or dictionary, not hardcoded in the logic.
+
+2. Business Logic Specifications
+Vehicle Scaling: Use a base rate for CAR. Apply multipliers: BUS (2.0x), MOTOR_CYCLE (0.8x).
+
+Standard Policy Logic: * Round total duration up to the nearest hour.
+
+Iterate through each hour segment. Apply a 1.5x multiplier if any part of that hour falls within Peak windows (07:00-10:00 or 16:00-19:00 weekdays).
+
+Special Flat-Rate Policies:
+
+Early Bird: Entry, Exit, Duration < 15h. Flat $15 (Car base).
+
+Night Owl: Entry, Exit [05:00-10:00 next day], Duration < 18h. Flat $8 (Car base).
+
+Loyalty Integration: Apply Tier discounts (Silver 10%, Gold 20%, Platinum 30%) to the flat rates of Special Policies.
+
+3. Technical & Dev-Ops Requirements
+Pythonic Code: Use Type Hinting, Dataclasses for session info, and Enums for Vehicle Types and Loyalty Tiers.
+
+Containerization: Provide a Dockerfile based on python:3.10-slim.
+
+Testing: Provide a comprehensive pytest suite. Include edge cases:
+
+A session crossing into/out of peak hours.
+
+A session just missing the "Early Bird" exit window by one minute.
+
+Bus vs. Motorcycle scaling.
+
+4. Output Deliverables
+Project Structure: A clean directory layout.
+
+Core Logic: interfaces.py, policies.py, calculator.py.
+
+Tests: test_parking_calculator.py.
+
+Deployment: Dockerfile and requirements.txt.
+
+Implementation Diagram Strategy
+When you run this prompt, the resulting code should follow a structure similar to this:
+
+Policy Interface: calculate(entry_time, exit_time, vehicle_type)
+
+StandardPolicy: Handles hourly iteration + peak multipliers.
+
+FlatRatePolicy: Handles Early Bird/Night Owl with loyalty logic.
+
+Next Step
+Would you like me to use this meta-prompt to generate the full Python implementation (code, Dockerfile, and tests) for you right now?
+
+You said
+Additional context :
+
+- For ealry bird Requires vehicle entry between 6:00 AM – 9:00 AM AND
+
+vehicle exit between 3:30 PM – 7:00 PM on the same calendar day.
+
+- For night owl special Requires vehicle entry between 6:00 PM – 11:59 PM AND
+
+vehicle exit between 5:00 AM – 10:00 AM on the next consecutive calendar day.
+
+- During a parking session, multiple policies might be applicable, e.g - iat 6:30 AM and leaves at 4:00 PM. This
+
+transaction may meet the criteria for Standard Hourly and Early Bird.
+
+- Need to evaluate applicable policies and select the one giving minimum fee
+
+
+
+- if vehicle stays more that 24 hours, then early bird special and night owl special policies are not applicable, need to use stand policy
+
+Gemini said
+This additional context moves the project from a simple calculator to a Competitive Strategy Engine. The system now needs to evaluate all qualifying policies for a single session and select the most "customer-friendly" (lowest) price, while enforcing strict duration guardrails.
+
+Here is the refined Meta Prompt incorporating these complex logical constraints and the technical architecture requirements.
+
+Refined Meta-Prompt: Smart Parking Engine
+Role: Senior Backend Architect. Objective: Develop a Python-based Parking Rate Engine that evaluates multiple pricing strategies and returns the minimum calculated fee.
+
+1. Architecture & Design Patterns
+Strategy Pattern: Define a BaseParkingPolicy interface with an is_applicable() and calculate_fee() method.
+
+Composite Evaluator: Create a RateEngine that holds a collection of all policies. For every parking session, it must iterate through all policies, filter by applicability, and return the minimum fee.
+
+Open/Closed Principle: Ensure that adding a "Weekend Special" or "Holiday Rate" requires creating a new class without modifying the RateEngine.
+
+Configuration Injection: Use a RateConfig dataclass to store multipliers (CAR: 1.0, BUS: 2.0, MOTOR_CYCLE: 0.8) and base hourly rates.
+
+2. Policy Logic Refinement
+Global Guardrail: If total duration > 24 hours, automatically disqualify EarlyBird and NightOwl specials.
+
+Standard Policy (Default):
+
+Iterate per hour segment (rounded up).
+
+Apply 1.5x multiplier for segments overlapping Weekday Peak: and.
+
+Special Policies (Flat Rates + Loyalty):
+
+Early Bird: Entry, Exit, Same Day, < 15h. Base: $15.
+
+Night Owl: Entry, Exit [05:00-10:00 next day], < 18h. Base: $8.
+
+Note: Apply loyalty tier discounts (Silver: 10%, Gold: 20%, Platinum: 30%) to the flat rate before comparing with Standard.
+
+3. Technical Requirements
+Stack: Python 3.10+, pytest for unit testing.
+
+Data Structures: Use Enum for VehicleType and LoyaltyTier. Use datetime and timedelta for precision.
+
+Environment: Provide a Dockerfile for a containerized deployment.
+
+Testing Coverage: * Test a "Best Deal" scenario where a CAR qualifies for Early Bird ($15) but the Standard rate is cheaper (e.g., a very short stay), ensuring the engine selects the lower value.
+
+Test the 24-hour disqualification rule.
+
+Test BUS multiplier application across all policies.
+
+4. Logic Implementation Guidance
+Ensure the code uses abstraction to handle time comparisons. The RateEngine should look like this in principle:
+
+Python
+applicable_fees = [policy.calculate(session) for policy in policies if policy.is_applicable(session)]
+return min(applicable_fees)
+Next Step
+This meta-prompt is now fully optimized for a "Minimum Fee" logic. Would you like me to generate the complete Python codebase, including the RateEngine, all Policy classes, and the pytest suite based on these final specs?
+
+You said
+Additional context for the meta prompt
+
+- For early bird special , driver needs to arrive between 6:00 AM - 9:00 AM and need to exit between 3:30 PM - 7:00 PM on the same calender day
+
+- For night owl special , Requires vehicle entry between 6:00 PM – 11:59 PM AND
+
+vehicle exit between 5:00 AM – 10:00 AM on the next consecutive calendar day.
+
+- Peak hour Hours that overlap, even partially, with designated peak periods
+
+(7:00 AM – 10:00 AM OR 4:00 PM – 7:00 PM on weekdays) shall incur a 1.5x multiplier
+
+applied to that specific hour's calculated rate.
+
+
+
+Testing requirements,
+
+Frame work should generate test cases first, if satisfied will move to ward implementation and one scenario at a time for one business use case at a time.
+
+
+
+- For standard with/without peak hours policies ,
+
+- test to calculate if the vehicle is parked for only one hour.
+
+- test to calculate if the vehcile is parked for two hours.
+
+- test to calculate if the vehicle is parked for additional hours.
+
+- test to apply peak hour charges
+
+
+- For early bird special :
+
+- test to apply the fixed rate $15 dollar
+
+- test to apply loyality discount
+
+- invalid if parked for more than 24 hours.
+
+
+
+
+
+For night owl special :
+
+- test to apply the fixed rate $18 dollar
+
+- test to apply loyality discount
+
+- invalid if parked for more than 24 hours.
+
+Gemini said
+To accommodate your specific workflow—generating test cases first before moving to implementation—the meta-prompt must be structured to force the AI into a Test-Driven Development (TDD) cycle.
+
+Here is the final, comprehensive Meta Prompt.
+
+The Master Meta-Prompt: TDD Parking Engine
+Role: You are a Senior SDET (Software Development Engineer in Test) and Architect. Your task is to design a Smart Parking Rate Calculator using Python 3.10+ following a strict Test-Driven Development (TDD) workflow.
+
+Phase 1: Architecture Design (Context)
+Pattern: Use the Strategy Pattern for policies and a Competitive Rate Evaluator to pick the minimum fee.
+
+Abstractions: * IParkingPolicy: Interface with is_applicable(session) and calculate(session).
+
+VehicleType (Enum): CAR (1x), BUS (2x), MOTOR_CYCLE (0.8x).
+
+LoyaltyTier (Enum): NONE (0%), SILVER (10%), GOLD (20%), PLATINUM (30%).
+
+Phase 2: Test Case Generation (Current Focus)
+Stop! Before writing any business logic or implementation code, you must generate a comprehensive pytest suite. The test cases must be categorized by business use case as follows:
+
+1. Standard Policy (Hourly + Peak)
+
+Single Hour: Verify $5 base rate for < 1 hour.
+
+Two Hours: Verify $5 (1st) + $3 (2nd) = $8.
+
+Additional Hours: Verify $5 + $3 + $2(n) for 3+ hours.
+
+Peak Multiplier (1.5x): Test a session overlapping 7:00 AM–10:00 AM or 4:00 PM–7:00 PM weekdays. Verify the multiplier applies only to segments overlapping those windows.
+
+2. Early Bird Special ($15 Base)
+
+Qualification: Entry, Exit same day.
+
+Loyalty: Apply tiered discounts (e.g., PLATINUM = $10.50).
+
+Invalidation: Disqualify if duration > 24 hours.
+
+3. Night Owl Special ($8 Base)
+
+Qualification: Entry, Exit [05:00-10:00 next day].
+
+Loyalty: Apply tiered discounts (e.g., GOLD = $6.40).
+
+Invalidation: Disqualify if duration > 24 hours.
+
+4. Competitive Engine (Min Fee)
+
+Lowest Price Selection: If a session qualifies for Standard ($20) and Early Bird ($15), the engine must return $15.
+
+Vehicle Scaling: Verify a BUS pays 2x the final calculated minimum CAR rate.
+
+Phase 3: Technical Constraints
+No Hardcoding: Rates and time windows must be passed via a configuration object.
+
+Scoping: Implementation must only depend on interfaces.
+
+Environment: Code must be ready for a Dockerfile (python:3.10-slim).
+
+Instruction for AI:
+DO NOT write the implementation logic yet. Provide only the Project Directory Structure and the Full Pytest Suite based on the scenarios above. Once the tests are reviewed, we will proceed to implement the business logic one scenario at a time.
+
